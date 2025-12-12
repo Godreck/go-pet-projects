@@ -1,0 +1,28 @@
+# Binaries
+qr
+qr.exe
+*.exe
+*.out
+
+# Build dirs
+/bin/
+/build/
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+*.swp
+
+# Logs & secrets
+*.log
+.env
+
+# Test artifacts
+coverage.out
+*.test
+
+# Local QR images (не коммитим)
+*.png
+*.jpg
+*.jpeg
