@@ -22,7 +22,7 @@ qr.exe
 coverage.out
 *.test
 
-# Local QR images (не коммитим)
+# Local QR images
 *.png
 *.jpg
 *.jpeg
