@@ -3,6 +3,7 @@ package worker
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"sync"
 )
 
@@ -15,6 +16,7 @@ type Pool struct {
 	queue       chan string
 	processor   Processor
 	wg          sync.WaitGroup
+	logger      *slog.Logger
 }
 
 func NewPool(workerCount, queueSize int, processor Processor) *Pool {
@@ -30,14 +32,22 @@ func NewPool(workerCount, queueSize int, processor Processor) *Pool {
 		processor = func(context.Context, string) {}
 	}
 
+	logger := slog.Default().WithGroup("worker_pool")
 	return &Pool{
 		workerCount: workerCount,
 		queue:       make(chan string, queueSize),
 		processor:   processor,
+		logger:      logger,
 	}
 }
 
+func (p *Pool) SetLogger(logger *slog.Logger) {
+	p.logger = logger.WithGroup("worker_pool")
+}
+
 func (p *Pool) Start(ctx context.Context) {
+	p.logger.Info("worker pool started", "workers", p.workerCount, "queue_size", cap(p.queue))
+
 	for i := 0; i < p.workerCount; i++ {
 		p.wg.Add(1)
 
@@ -47,8 +57,10 @@ func (p *Pool) Start(ctx context.Context) {
 			for {
 				select {
 				case <-ctx.Done():
+					p.logger.Info("worker exiting due to context done")
 					return
 				case jobID := <-p.queue:
+					p.logger.Debug("worker got job", "job_id", jobID)
 					p.processor(ctx, jobID)
 				}
 			}
@@ -59,8 +71,10 @@ func (p *Pool) Start(ctx context.Context) {
 func (p *Pool) Enqueue(jobID string) error {
 	select {
 	case p.queue <- jobID:
+		p.logger.Debug("job enqueued", "job_id", jobID)
 		return nil
 	default:
+		p.logger.Warn("job enqueue faild: queue full", "job_id", jobID)
 		return ErrQueueFull
 	}
 }
